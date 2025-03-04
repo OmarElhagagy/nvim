@@ -172,6 +172,45 @@ require('lazy').setup({
     end,
   },
 
+  -- Add nvim-jdtls for enhanced Java support
+  {
+    'mfussenegger/nvim-jdtls',
+    ft = 'java', -- Load only for Java files
+    config = function()
+      local jdtls = require('jdtls')
+      local jdtls_bin = vim.fn.stdpath('data') .. '/mason/bin/jdtls' -- Path to Mason-installed jdtls
+      local root_dir = require('jdtls.setup').find_root({ '.git', 'pom.xml', 'build.gradle' }) -- Detect project root
+      local project_name = vim.fn.fnamemodify(root_dir, ':p:h:t') -- Extract project name from root directory
+      local workspace_dir = vim.fn.stdpath('cache') .. '/jdtls/workspace/' .. project_name -- Unique workspace per project
+
+      local config = {
+        cmd = { jdtls_bin, '-data', workspace_dir }, -- Launch jdtls with project-specific workspace
+        root_dir = root_dir,
+        settings = {
+          java = {
+            configuration = {
+              runtimes = {
+                { name = "JavaSE-21", path = "/home/omaradel/.sdkman/candidates/java/21.0.5-tem" },
+              },
+            },
+            autobuild = { enabled = true },
+            signatureHelp = { enabled = true },
+            contentProvider = { preferred = "fernflower" },
+            completion = {
+              favoriteStaticMembers = {
+                "jakarta.servlet.http.HttpServletRequest.*",
+                "jakarta.servlet.http.HttpServletResponse.*",
+              },
+            },
+          },
+        },
+      }
+
+      -- Start or attach the jdtls client
+      jdtls.start_or_attach(config)
+    end,
+  },
+
   -- LSP (Language Server Protocol) configuration
   {
     'neovim/nvim-lspconfig',
@@ -221,37 +260,17 @@ require('lazy').setup({
       local capabilities = vim.lsp.protocol.make_client_capabilities()
       capabilities = require('cmp_nvim_lsp').default_capabilities(capabilities)
 
-      -- Define LSP servers and their settings
+      -- Define LSP servers and their settings (excluding jdtls)
       local servers = {
-        jdtls = { -- Java LSP with enhanced settings for JavaEE
-          settings = {
-            java = {
-              configuration = {
-                runtimes = {
-                  { name = "JavaSE-21", path = "/home/omaradel/.sdkman/candidates/java/21.0.5-tem" },
-                },
-              },
-              autobuild = { enabled = true },
-              signatureHelp = { enabled = true },
-              contentProvider = { preferred = "fernflower" }, -- Better decompilation
-              completion = {
-                favoriteStaticMembers = { -- Preload common Jakarta EE imports
-                  "jakarta.servlet.http.HttpServletRequest.*",
-                  "jakarta.servlet.http.HttpServletResponse.*",
-                },
-              },
-            },
-          },
-        },
-        gopls = {}, -- Go LSP
-        rust_analyzer = { -- Rust LSP with clippy on save
+        gopls = {},
+        rust_analyzer = {
           settings = {
             ['rust-analyzer'] = {
               checkOnSave = { command = 'clippy' },
             },
           },
         },
-        lua_ls = { -- Lua LSP with snippet support
+        lua_ls = {
           settings = {
             Lua = { completion = { callSnippet = 'Replace' } },
           },
