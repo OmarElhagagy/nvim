@@ -176,39 +176,6 @@ require('lazy').setup({
   {
     'mfussenegger/nvim-jdtls',
     ft = 'java', -- Load only for Java files
-    config = function()
-      local jdtls = require('jdtls')
-      local jdtls_bin = vim.fn.stdpath('data') .. '/mason/bin/jdtls' -- Path to Mason-installed jdtls
-      local root_dir = require('jdtls.setup').find_root({ '.git', 'pom.xml', 'build.gradle' }) -- Detect project root
-      local project_name = vim.fn.fnamemodify(root_dir, ':p:h:t') -- Extract project name from root directory
-      local workspace_dir = vim.fn.stdpath('cache') .. '/jdtls/workspace/' .. project_name -- Unique workspace per project
-
-      local config = {
-        cmd = { jdtls_bin, '-data', workspace_dir }, -- Launch jdtls with project-specific workspace
-        root_dir = root_dir,
-        settings = {
-          java = {
-            configuration = {
-              runtimes = {
-                { name = "JavaSE-21", path = "/home/omaradel/.sdkman/candidates/java/21.0.5-tem" },
-              },
-            },
-            autobuild = { enabled = true },
-            signatureHelp = { enabled = true },
-            contentProvider = { preferred = "fernflower" },
-            completion = {
-              favoriteStaticMembers = {
-                "jakarta.servlet.http.HttpServletRequest.*",
-                "jakarta.servlet.http.HttpServletResponse.*",
-              },
-            },
-          },
-        },
-      }
-
-      -- Start or attach the jdtls client
-      jdtls.start_or_attach(config)
-    end,
   },
 
   -- LSP (Language Server Protocol) configuration
@@ -274,6 +241,7 @@ require('lazy').setup({
           settings = {
             Lua = { completion = { callSnippet = 'Replace' } },
           },
+          root_dir = require('lspconfig.util').root_pattern('.git', 'lua'),
         },
       }
 
@@ -286,6 +254,7 @@ require('lazy').setup({
             require('lspconfig')[server_name].setup {
               capabilities = capabilities,
               settings = servers[server_name].settings,
+              root_dir = servers[server_name].root_dir,
             }
           end,
         },
@@ -397,4 +366,44 @@ vim.diagnostic.config({
   underline = true,       -- Underline affected code
   update_in_insert = false, -- Don't update diagnostics while typing
   severity_sort = true,   -- Sort diagnostics by severity
+})
+
+-- Function to set up jdtls for Java files
+local function setup_jdtls()
+  local jdtls = require('jdtls')
+  local jdtls_bin = vim.fn.stdpath('data') .. '/mason/bin/jdtls'
+  local root_dir = require('jdtls.setup').find_root({ '.git', 'pom.xml', 'build.gradle' })
+  local project_name = vim.fn.fnamemodify(root_dir, ':p:h:t')
+  local workspace_dir = vim.fn.stdpath('cache') .. '/jdtls/workspace/' .. project_name
+
+  local config = {
+    cmd = { jdtls_bin, '-data', workspace_dir },
+    root_dir = root_dir,
+    settings = {
+      java = {
+        configuration = {
+          runtimes = {
+            { name = "JavaSE-21", path = "/home/omaradel/.sdkman/candidates/java/21.0.5-tem" },
+          },
+        },
+        autobuild = { enabled = true },
+        signatureHelp = { enabled = true },
+        contentProvider = { preferred = "fernflower" },
+        completion = {
+          favoriteStaticMembers = {
+            "jakarta.servlet.http.HttpServletRequest.*",
+            "jakarta.servlet.http.HttpServletResponse.*",
+          },
+        },
+      },
+    },
+  }
+
+  jdtls.start_or_attach(config)
+end
+
+-- Autocommand to trigger jdtls setup for each Java file
+vim.api.nvim_create_autocmd('FileType', {
+  pattern = 'java',
+  callback = setup_jdtls,
 })
