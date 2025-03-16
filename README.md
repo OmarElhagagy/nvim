@@ -1,5 +1,5 @@
 # Neovim Beginner’s Power Pack
-A modern, beginner-friendly `init.lua` configuration for Neovim, packed with essentials to supercharge your editing without the steep learning curve.
+A modern, beginner-friendly `init.lua` configuration for Neovim, packed with essentials to supercharge your editing without the steep learning curve. Inspired by kickstart.nvim.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
