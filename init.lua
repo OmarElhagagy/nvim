@@ -32,6 +32,10 @@ vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' } -- Customize how
 vim.opt.inccommand = 'split' -- Show live preview of substitutions in a split
 vim.opt.cursorline = true    -- Highlight the current line
 vim.opt.scrolloff = 10       -- Keep 10 lines visible above/below the cursor when scrolling
+vim.opt.tabstop = 2          -- Visual width of a tab character
+vim.opt.softtabstop = 2      -- Number of spaces a tab counts for while editing 
+vim.opt.shiftwidth = 2       -- Number of spaces for each indent level
+vim.opt.expandtab = true     -- Convert tabs to spaces
 
 -- [[ Basic Keymaps ]]
 vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')                  -- Clear search highlights with Escape
@@ -210,7 +214,11 @@ require('lazy').setup({
 
           -- Highlight references under cursor if supported
           local client = vim.lsp.get_client_by_id(event.data.client_id)
-          if client and client.server_capabilities.documentHighlightProvider then
+          if not client then
+            print("LspAttach: No client found for client_id " .. event.data.client_id .. " in buffer " .. event.buf)
+            return
+          end
+          if client.server_capabilities and client.server_capabilities.documentHighlightProvider then
             vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
               buffer = event.buf,
               callback = vim.lsp.buf.document_highlight,
@@ -243,6 +251,10 @@ require('lazy').setup({
           },
           root_dir = require('lspconfig.util').root_pattern('.git', 'lua'),
         },
+        ts_ls = {},    -- TypeScript/JavaScript support (replaces tsserver)
+        eslint = {},   -- ESLint integration
+        html = {},
+        cssls = {},
       }
 
       -- Setup Mason and LSP servers
@@ -251,14 +263,22 @@ require('lazy').setup({
         ensure_installed = vim.tbl_keys(servers), -- Install all defined servers
         handlers = {
           function(server_name)
-            require('lspconfig')[server_name].setup {
-              capabilities = capabilities,
-              settings = servers[server_name].settings,
-              root_dir = servers[server_name].root_dir,
-            }
+            if servers[server_name] then
+              require('lspconfig')[server_name].setup {
+                capabilities = capabilities,
+                settings = servers[server_name].settings,
+                root_dir = servers[server_name].root_dir,
+              }
+            end
           end,
         },
       })
+
+      -- Ensure typescript-language-server is installed via Mason
+      local mason_registry = require('mason-registry')
+      if not mason_registry.is_installed('typescript-language-server') then
+        mason_registry.get_package('typescript-language-server'):install()
+      end
     end,
   },
 
@@ -344,7 +364,7 @@ require('lazy').setup({
     build = ':TSUpdate', -- Update parsers on install
     config = function()
       require('nvim-treesitter.configs').setup {
-        ensure_installed = { 'lua', 'vim', 'vimdoc', 'javascript', 'typescript', 'rust', 'go', 'java' }, -- Languages to install
+        ensure_installed = { 'lua', 'vim', 'vimdoc', 'javascript', 'typescript', 'tsx', 'rust', 'go', 'java' }, -- Languages to install
         auto_install = true, -- Auto-install missing parsers
         highlight = { enable = true, additional_vim_regex_highlighting = false }, -- Enable highlighting
         indent = { enable = true }, -- Enable indentation
